@@ -1,5 +1,87 @@
-function run_subj(subj, subjects_folder, target_name, mask, hairthicknesses)
+function run_subj(subj, subjects_folder, target_name, mask, hairthicknesses, ...
+    exp_args, setup_args)
+arguments % Argument Validation
+    % variables that tend to vary by subject
+    subj {mustBeFolder}
+    subjects_folder {mustBeFolder}
+    target_name char
+    mask {mustBeFile}
+    hairthicknesses {mustBeNonnegative} = 0:4 
+
+    % variables that tend to vary by experiment
+    exp_args.MSO {mustBeInRange(exp_args.MSO,0,100)} = 100; %this maximum stimulator output could be, for example, resting motor threshold
+    exp_args.Scale_Efield_to_Value {mustBeNumeric} = NaN; % NaN = scales to MSO, otherwise to the given value
+    exp_args.NO_USE_THIS_MAX_DIDT {mustBeNumeric} = NaN;
+    exp_args.Efield_display_decimal_places {mustBeInteger, mustBeNonnegative} = 2;
+    exp_args.Suppress_Any_Konsole_Input_or_Graphical_Output logical = 1;
+    exp_args.Stokes_factor=2.7;
+    exp_args.Neuronaviagtion_system char = 'Brainsight'; %'Localite' 'ANT Visor2'
+    exp_args.DTI logical = 0;
+    exp_args.StartTargetingNavigator logical = 0;
+    exp_args.outputfolder char = [subj '_' target_name];
+    exp_args.scirunfolder char = [subj '_' target_name '_scirun'];
+%     exp_args.Original_MRI=['sub-' subj '_ses-01_T1w.nii.gz'];
+    exp_args.Original_MRI char = ['m2m_' subj '/T1.nii.gz'];
+%     exp_args.SimNIBS_MRI=[subj '_T1fs_conform.nii.gz'];
+    exp_args.SimNIBS_MRI char = 'T1.nii.gz';
+    exp_args.prefix_for_voxelized_nii_files char = 'res';
+    exp_args.dti_file char = ['d2c_' subj '/dti_results_T1space/DTI_conf_tensor.nii.gz'];
+    exp_args.Optimize_ROI_Efield_Magnitude logical = 0; %0 means TMS coil placement is optimized for a particular ROI-E-field direction (i.e., perpendicular to sulcal wall)
+    exp_args.TMS_induced_Efield_flows_into_sulcalwall logical= 1; %1=into wall, most effcicent for neuronal recruitment
+    exp_args.biphasic_waveform logical = true;
+    exp_args.scalp_search_radius {mustBeNonnegative} = 25; %25mm radius around scalp-prpjected point
+    exp_args.scalp_coil_center_search_grid {mustBeNonnegative} = 1; %1mm Manhattan distance
+    exp_args.coil_rotation_discretization {mustBeNonnegative} = 1; %1 degree
+    exp_args.opt_search_angle {mustBeNonnegative} = 180; % optimization angle range
+    exp_args.opt_target_size {mustBeNonnegative} = 5; %radius [mm] of ROI
+    exp_args.coil_name char = 'MagVenture_Cool-B65.ccd'; %Note, SimNIBS coil models are made for single pulses meaning the induced E-field points towards TMS coil handle
+    exp_args.Automatric_Flip_current_direction logical = 1; %so that TMS coil cable does not dangle in subjects face
+    exp_args.Use_original_mask_for_Efield_eval logical = 0; %otherwise it uses SimNIBS Target with ...
+    exp_args.Voxelize_Efield_mask_interpolation_thres {mustBeNonnegative} =eps; % ... this threshold
+
+    % setup
+    setup_args.fsl_path {mustBeFolder} = '/usr/local/packages/fsl-6.0.3/';
+    setup_args.simnibs_folder {mustBeFolder} ='/usr/local/packages/simnibs/4.1.0';
+    setup_args.freesurfer_matlab_folder {mustBeFolder} = '/usr/local/packages/freesurfer_v7.3.2/matlab/';
+    setup_args.coil_models_are_here char = 'resources/coil_models/Drakaki_BrainStim_2022/';
+    setup_args.root_folder char = [pwd filesep];
+end
+
+% distribute name-value variables
+MSO = exp_args.MSO;
+Scale_Efield_to_Value = exp_args.Scale_Efield_to_Value;
+NO_USE_THIS_MAX_DIDT = exp_args.NO_USE_THIS_MAX_DIDT;
+Efield_display_decimal_places = exp_args.Efield_display_decimal_places;
+Suppress_Any_Konsole_Input_or_Graphical_Output = exp_args.Suppress_Any_Konsole_Input_or_Graphical_Output;
+Stokes_factor = exp_args.Stokes_factor;
+Neuronaviagtion_system = exp_args.Neuronaviagtion_system; %'Localite' 'ANT Visor2'
+DTI = exp_args.DTI;
+StartTargetingNavigator = exp_args.StartTargetingNavigator;
+outputfolder = exp_args.outputfolder;
+scirunfolder = exp_args.scirunfolder;
+Original_MRI = exp_args.Original_MRI;
+SimNIBS_MRI = exp_args.SimNIBS_MRI;
+prefix_for_voxelized_nii_files = exp_args.prefix_for_voxelized_nii_files;
+dti_file = exp_args.dti_file;
+Optimize_ROI_Efield_Magnitude = exp_args.Optimize_ROI_Efield_Magnitude;
+TMS_induced_Efield_flows_into_sulcalwall = exp_args.TMS_induced_Efield_flows_into_sulcalwall;
+biphasic_waveform = exp_args.biphasic_waveform;
+scalp_search_radius = exp_args.scalp_search_radius;
+scalp_coil_center_search_grid = exp_args.scalp_coil_center_search_grid;
+coil_rotation_discretization = exp_args.coil_rotation_discretization;
+opt_search_angle = exp_args.opt_search_angle;
+opt_target_size = exp_args.opt_target_size;
+coil_name = exp_args.coil_name;
+Automatric_Flip_current_direction = exp_args.Automatric_Flip_current_direction;
+Use_original_mask_for_Efield_eval = exp_args.Use_original_mask_for_Efield_eval;
+Voxelize_Efield_mask_interpolation_thres = exp_args.Voxelize_Efield_mask_interpolation_thres;
+
+fsl_path = setup_args.fsl_path;
+simnibs_folder = setup_args.simnibs_folder;
+freesurfer_matlab_folder = setup_args.freesurfer_matlab_folder;
+coil_models_are_here = setup_args.coil_models_are_here;
 global root_folder;
+root_folder=setup_args.root_folder;
 
 if (ispc)
     sep='\';
@@ -13,27 +95,9 @@ end
 space = ' ';
 
 %%%%% CHANGE TAP PARAMETER HERE: Begin %%%%%
-MSO=100; %this maximum stimulator output could be, for example, resting motor threshold
-Scale_Efield_to_Value=<required>; % NaN = scales to MSO, otherwise to the given value
-NO_USE_THIS_MAX_DIDT=NaN;
-Efield_display_decimal_places=2;
-Suppress_Any_Konsole_Input_or_Graphical_Output=1;
-Stokes_factor=2.7;
-Neuronaviagtion_system='Brainsight'; %'Localite' 'ANT Visor2'
-DTI=0;
-StartTargetingNavigator = 0;
-fsl_path='/usr/local/packages/fsl-6.0.3';
-simnibs_folder='/usr/local/packages/simnibs/4.1.0/';
-setenv('LD_LIBRARY_PATH', sprintf('%s/simnibs/external/lib/linux:%s', simnibs_folder, getenv('LD_LIBRARY_PATH'))); % needed for running SimNIBS on certain linux clusters
-root_folder=[pwd sep];
-freesurfer_matlab_folder='/usr/local/packages/freesurfer_v7.3.2/matlab';
-coil_models_are_here='resources/coil_models/Drakaki_BrainStim_2022/';
-outputfolder=[subj '_' target_name];
-scirunfolder=[subj '_' target_name '_scirun'];
-Original_MRI=['sub-' subj '_ses-01_T1w.nii.gz'];
-SimNIBS_MRI='T1.nii.gz';
-prefix_for_voxelized_nii_files='res';
-dti_file = ['d2c_' subj '/dti_results_T1space/DTI_conf_tensor.nii.gz'];
+if isunix && ~ismac
+    setenv('LD_LIBRARY_PATH', sprintf('%s/simnibs/external/lib/linux:%s', simnibs_folder, getenv('LD_LIBRARY_PATH'))); % needed for running SimNIBS on certain linux clusters
+end
 %change separators and spaces
 fsl_path=strrep(fsl_path,not_sep,sep);
 fsl_path=strrep(fsl_path,space,rep_space);
@@ -51,19 +115,8 @@ addpath(char(freesurfer_matlab_folder));
 addpath(char(fsl_path));
 tms_opt = opt_struct('TMSoptimize');
 
-Optimize_ROI_Efield_Magnitude = 0; %0 means TMS coil placement is optimized for a particular ROI-E-field direction (i.e., perpendicular to sulcal wall)
-hairthicknesses=unique([hairthicknesses 0:0.5:max([4 ceil(hairthicknesses*1.5)])]);
-TMS_induced_Efield_flows_into_sulcalwall=1; %1=into wall, most effcicent for neuronal recruitment
-biphasic_waveform = true;
-scalp_search_radius=25; %25mm radius around scalp-prpjected point
-scalp_coil_center_search_grid=1; %1mm Manhattan distance
-coil_rotation_discretization = 1; %1 degree
-tms_opt.search_angle = 180;
-coil_name='MagVenture_Cool-B65.ccd'; %Note, SimNIBS coil models are made for single pulses meaning the induced E-field points towards TMS coil handle
-tms_opt.target_size=5; %radius [mm] of ROI
-Automatric_Flip_current_direction= 1; %so that TMS coil cable does not dangle in subjects face
-Use_original_mask_for_Efield_eval = 0; %otherwise it uses SimNIBS Target with ...
-Voxelize_Efield_mask_interpolation_thres=eps; % ... this threshold
+tms_opt.search_angle = opt_search_angle;
+tms_opt.target_size = opt_target_size;
 
 if (DTI==1)
     tms_opt.fname_tensor=[root_folder sep subjects_folder sep subj sep dti_file];
