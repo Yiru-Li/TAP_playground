@@ -2,11 +2,11 @@ function run_subj(subj, subjects_folder, target_name, mask, hairthicknesses, ...
     exp_args, setup_args)
 arguments % Argument Validation
     % variables that tend to vary by subject
-    subj {mustBeFolder}
+    subj char
     subjects_folder {mustBeFolder}
     target_name char
-    mask {mustBeFile}
-    hairthicknesses {mustBeNonnegative} = 0:4 
+    mask char
+    hairthicknesses {mustBeNonnegative} = 0:0.5:4 
 
     % variables that tend to vary by experiment
     exp_args.MSO {mustBeInRange(exp_args.MSO,0,100)} = 100; %this maximum stimulator output could be, for example, resting motor threshold
@@ -21,7 +21,7 @@ arguments % Argument Validation
     exp_args.outputfolder char = [subj '_' target_name];
     exp_args.scirunfolder char = [subj '_' target_name '_scirun'];
 %     exp_args.Original_MRI=['sub-' subj '_ses-01_T1w.nii.gz'];
-    exp_args.Original_MRI char = ['m2m_' subj '/T1.nii.gz'];
+    exp_args.Original_MRI char = ['m2m_' subj filesep 'T1.nii.gz'];
 %     exp_args.SimNIBS_MRI=[subj '_T1fs_conform.nii.gz'];
     exp_args.SimNIBS_MRI char = 'T1.nii.gz';
     exp_args.prefix_for_voxelized_nii_files char = 'res';
@@ -41,7 +41,7 @@ arguments % Argument Validation
 
     % setup
     setup_args.fsl_path {mustBeFolder} = '/usr/local/packages/fsl-6.0.3/';
-    setup_args.simnibs_folder {mustBeFolder} ='/usr/local/packages/simnibs/4.1.0';
+    setup_args.simnibs_folder {mustBeFolder} ='/usr/local/packages/simnibs/4.1.0/';
     setup_args.freesurfer_matlab_folder {mustBeFolder} = '/usr/local/packages/freesurfer_v7.3.2/matlab/';
     setup_args.coil_models_are_here char = 'resources/coil_models/Drakaki_BrainStim_2022/';
     setup_args.root_folder char = [pwd filesep];
@@ -109,7 +109,7 @@ coil_models_are_here=strrep(coil_models_are_here,not_sep,sep);
 coil_models_are_here=strrep(coil_models_are_here,space,rep_space);
 Original_MRI=strrep(Original_MRI,not_sep,sep);
 Original_MRI=strrep(Original_MRI,space,rep_space);
-addpath(char([simnibs_folder 'matlab_tools']));
+addpath(char([simnibs_folder filesep 'matlab_tools']));
 addpath(char([root_folder sep 'matlab']));
 addpath(char(freesurfer_matlab_folder));
 addpath(char(fsl_path));
@@ -710,4 +710,10 @@ HT2MSO_coefs = polyfit(excel_output.Hair_Thickness, Scale_Efield_to_Value*100./e
 writetable(table(HT2MSO_coefs), [excel_output_location filesep subj '_MSO.xlsx'], 'Range', 'I1');
 
 disp(['[TAP] All computations done for subject ' subj '.']);
+
+% Move files to numbered output directory
+copyfile([subjects_folder filesep subj filesep Original_MRI], excel_output_location) % T1
+copyfile([subjects_folder filesep subj filesep mask], excel_output_location) % mask
+mkdir([subjects_folder filesep subj filesep subj '_target_' target_name]);
+movefile([subjects_folder filesep subj filesep '*' target_name '*'], [subjects_folder filesep subj filesep subj '_target_' target_name]);
 end
