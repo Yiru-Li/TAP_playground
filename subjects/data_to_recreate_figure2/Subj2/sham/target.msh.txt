@@ -1,1 +1,0 @@
-target.msh contains the non-anonymized head mesh of the subject and cannot be uploaded publically
