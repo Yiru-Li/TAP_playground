@@ -528,6 +528,7 @@ for i=hairthicknesses
                 system([simnibs_folder sep 'bin' sep 'msh2nii ' HT_folder filesep 'limited_target.msh ' subjects_folder filesep subj filesep 'm2m_' subj ' ' HT_folder filesep 'limited']);
                 Target_nii=load_untouch_nii([HT_folder filesep 'limited_Target.nii.gz']);
                 system(['rm ' HT_folder filesep 'limited_target.msh']);
+                copyfile([HT_folder filesep 'limited_Target.nii.gz'], excel_output_location)
             end
 
             if (~isempty(GM))
@@ -698,7 +699,7 @@ for i=hairthicknesses
     % Move target mask out of temporary folder before deletion
     % and keep 0mm-hairthickness folder for sanity check
     if i==hairthicknesses(1)
-        movefile([subjects_folder sep subj sep' target_name '_HT' sprintf('%1.1f',i) filesep 'res_Target.nii.gz'], [subjects_folder filesep subj filesep outputfolder]);
+        copyfile([subjects_folder sep subj sep' target_name '_HT' sprintf('%1.1f',i) filesep 'res_Target.nii.gz'], [subjects_folder filesep subj filesep outputfolder]);
     else
         system(char(['rm -rf "' subjects_folder sep subj sep' target_name '_HT' sprintf('%1.1f',i) '"']));
     end
