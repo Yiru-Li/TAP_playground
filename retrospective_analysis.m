@@ -9,7 +9,7 @@ end
 subj='Ernie_headreco';
 subjects_folder='subjects';
 target_name='M1';
-outputfolder='M1_retrosim'
+outputfolder='M1_retrosim';
 
 BS_Trans_mat = read_brainsight_file([ subjects_folder sep subj sep target_name sep 'ernie_headreco_no-conform_M1_hair0.5mm.txt' ]);
 

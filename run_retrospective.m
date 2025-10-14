@@ -1,12 +1,12 @@
-function run_retrospective(subj, subjects_folder, mask, intensity, hairthickness, BS_file, ...
+function run_retrospective(subj, subjects_folder, mask, hairthickness, intensity, BS_file, ...
     exp_args, setup_args)
 arguments % Argument Validation
     % variables that tend to vary by subject
     subj char % subject ID
     subjects_folder {mustBeFolder} % subject parent folder 
     mask {mustBeFile} % absolute path to mask
-    intensity {mustBeInteger} % stimulation intensity; negative means reverse current
     hairthickness {mustBeNonnegative} % hair thickness measured during the session
+    intensity {mustBeInteger} % stimulation intensity; negative means reverse current
     BS_file {mustBeFile} % absolute path to brainsight file
 
     % variables that tend to vary by experiment
@@ -81,7 +81,7 @@ locs = [ROI.LocX ROI.LocY ROI.LocZ];
 [~, minind] = min(sum((locs-median(locs)).^2, 2));
 % make matrix
 T = [reshape(ROI{minind, 8:16}, 3, 3) ROI{minind, 5:7}'; 0 0 0 1];
-T(:, 4) = T(:, 4)+T(:, 3)*hair;
+T(:, 4) = T(:, 4)+T(:, 3)*hairthickness;
 T(:, [1 3]) = -T(:, [1 3]);
 %% run SimNIBS
 cd([subjects_folder filesep subj])
