@@ -511,24 +511,23 @@ for i=hairthicknesses
         if (res==0)
             if (~Use_original_mask_for_Efield_eval)
                 Target_nii=load_untouch_nii([subjects_folder sep subj sep target_name  '_HT' sprintf('%.1f',i) sep prefix_for_voxelized_nii_files '_Target.nii.gz']);
+                % Limit target to gyrus
+                a = reshape(msh.tetrahedra(msh.element_data{1, 1}.tetdata>0, :), [], 1);
+                b = reshape(msh.tetrahedra(msh.element_data{1, 1}.tetdata>0, [2:4 1]), [], 1);
+                G = graph(a, b, sqrt(sum((msh.nodes(a, :)-msh.nodes(b, :)).^2, 2)));
+                close_nodes = find(distances(G, find(all(msh.nodes==target.node', 2)))<=tms_opt.target_size+max(G.Edges.Weight));
+                filter = all(ismember(msh.tetrahedra, close_nodes), 2);
+                if ~isequal(msh.element_data{1, 1}.tetdata>0, filter)
+                    msh.element_data{1, 1}.tetdata = double(msh.element_data{1, 1}.tetdata>0 & filter);
+                    HT_folder = [subjects_folder sep subj sep target_name  '_HT' sprintf('%.1f',i)];
+                    mesh_save_gmsh4(msh, [HT_folder filesep 'limited_target.msh']);
+                    system([simnibs_folder sep 'bin' sep 'msh2nii ' HT_folder filesep 'limited_target.msh ' subjects_folder filesep subj filesep 'm2m_' subj ' ' HT_folder filesep 'limited']);
+                    Target_nii=load_untouch_nii([HT_folder filesep 'limited_Target.nii.gz']);
+                    system(['rm ' HT_folder filesep 'limited_target.msh']);
+                    copyfile([HT_folder filesep 'limited_Target.nii.gz'], excel_output_location)
+                end
             else
                 Target_nii=load_untouch_nii(ROI_mask_vol_file);
-            end
-
-            % Limit target to gyrus
-            a = reshape(msh.tetrahedra(msh.element_data{1, 1}.tetdata>0, :), [], 1);
-            b = reshape(msh.tetrahedra(msh.element_data{1, 1}.tetdata>0, [2:4 1]), [], 1);
-            G = graph(a, b, sqrt(sum((msh.nodes(a, :)-msh.nodes(b, :)).^2, 2)));
-            close_nodes = find(distances(G, find(all(msh.nodes==target.node', 2)))<=tms_opt.target_size+max(G.Edges.Weight));
-            filter = all(ismember(msh.tetrahedra, close_nodes), 2);
-            if ~isequal(msh.element_data{1, 1}.tetdata>0, filter)
-                msh.element_data{1, 1}.tetdata = double(msh.element_data{1, 1}.tetdata>0 & filter);
-                HT_folder = [subjects_folder sep subj sep target_name  '_HT' sprintf('%.1f',i)];
-                mesh_save_gmsh4(msh, [HT_folder filesep 'limited_target.msh']);
-                system([simnibs_folder sep 'bin' sep 'msh2nii ' HT_folder filesep 'limited_target.msh ' subjects_folder filesep subj filesep 'm2m_' subj ' ' HT_folder filesep 'limited']);
-                Target_nii=load_untouch_nii([HT_folder filesep 'limited_Target.nii.gz']);
-                system(['rm ' HT_folder filesep 'limited_target.msh']);
-                copyfile([HT_folder filesep 'limited_Target.nii.gz'], excel_output_location)
             end
 
             if (~isempty(GM))
