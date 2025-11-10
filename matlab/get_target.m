@@ -161,7 +161,7 @@ end
 if (tmp1~=0 || tmp2~=0) 
     if (which_pipeline==1)
       disp(['[TAP] Found ' gm_mask ' and now refine alignment (the following steps may take a few minutes, have patience) ']);
-      [~, ~, ~, ~, GM_fromMesh] = load_nii_file([subjects_folder sep subject sep 'm2m_' subject sep gm_mask], eps, 2);  
+      [~, ~, ~, ~, GM_fromMesh] = load_nii_file([subjects_folder sep subject sep 'm2m_' subject sep gm_mask], eps);%, intmax);  
       GM_fromMesh(find(GM_fromMesh>2))=0;
       GM_fromMesh(find(GM_fromMesh>0 & GM_fromMesh<=2))=1;
     elseif (tmp1~=0)
